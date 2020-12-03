@@ -1,0 +1,91 @@
+$(document).ready(function () {
+    $("#findProducto").autocomplete({
+        source: function (request, response) {
+            $.ajax({
+                url: "/productos/n/" + request.term,
+                dataType: "json",
+                data: {
+                    term: request.term
+                },
+                success: function (data) {
+                    console.log(data);
+                    response($.map(data, function (item) {
+                        return {
+                            value: item.id,
+                            label: item.nombre,
+                            precio: item.precio,
+                        };
+                    }));
+                },
+            });
+        },
+        select: function (event, ui) {
+            //$("#buscar_producto").val(ui.item.label);
+
+            if (itemsHelper.hasProducto(ui.item.value)) {
+                itemsHelper.incrementaCantidad(ui.item.value, ui.item.precio);
+                return false;
+            }
+
+            var linea = $("#detallesOrden").html();
+
+            linea = linea.replace(/{ID}/g, ui.item.value);
+            linea = linea.replace(/{NOMBRE}/g, ui.item.label);
+            linea = linea.replace(/{PRECIO}/g, ui.item.precio);
+
+            $("#cargarItemProductos tbody").append(linea);
+            itemsHelper.calcularImporte(ui.item.value, ui.item.precio, 1);
+
+            return false;
+        }
+    });
+
+    $("form").submit(function () {
+        $("#detallesOrden").remove();
+        return;
+    });
+
+});
+
+function calcularImporte(){
+
+}
+
+var itemsHelper = {
+    calcularImporte: function (id, precio, cantidad) {
+        $("#total_importe_" + id).html(parseInt(precio) * parseInt(cantidad));
+        this.calcularGranTotal();
+    },
+    hasProducto: function (id) {
+
+        var resultado = false;
+
+        $('input[name="item_id[]"]').each(function () {
+            if (parseInt(id) == parseInt($(this).val())) {
+                resultado = true;
+            }
+        });
+
+        return resultado;
+    },
+    incrementaCantidad: function (id, precio) {
+        var cantidad = $("#cantidad_" + id).val() ? parseInt($("#cantidad_" + id).val()) : 0;
+        $("#cantidad_" + id).val(++cantidad);
+        this.calcularImporte(id, precio, cantidad);
+        console.log(this.calcularImporte(id, precio, cantidad));
+        },
+    eliminarDetalle: function (id) {
+        $("#row_" + id).remove();
+        this.calcularGranTotal();
+    },
+    calcularGranTotal: function () {
+        var total = 0;
+
+        $('span[id^="total_importe_"]').each(function () {
+            total += parseInt($(this).html());
+        });
+
+        $('#gran_total').html(total);
+        console.log(this.calcularGranTotal());
+    }
+}
